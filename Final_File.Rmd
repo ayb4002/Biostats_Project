@@ -1,0 +1,224 @@
+---
+title: "final project"
+author: "Ayush, Yuxiao Rui, Sirui Xu, Xia Wu"
+date: '2022-11-29'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+    fig_height: 5
+    fig_width: 7
+  pdat_document:
+    fig_height: 3.5
+    fig_width: 3.5
+  word_document:
+    toc: no
+---
+
+```{r,echo=FALSE}
+knitr::opts_chunk$set(cache=TRUE, error=FALSE, message=FALSE, warning=FALSE,
+                      echo=T, tidy.opts=list(width.cutoff=60),tidy=TRUE)
+library(tidyverse)
+library(here)
+library(tidyr)
+library(amap)
+library(readxl)
+library(ggplot2)
+
+# load data
+dat <- read_xlsx("C:/Users/Lenovo/Desktop/Cornell Fall/Biostatistics/Project/sarcoma.xlsx", na = "NA")
+dat <- dat[complete.cases(dat),]
+```
+
+# Problem 2
+
+## Problem 2.1：Are there any differences in baseline characteristics between the two arms of the trial?
+
+### Problem 2.1: Check SEX
+check if 2 arms have the same amount of male & female in different stage 
+H0: The 2 arms have the same amount of male & female in different stage 
+H1: The 2 arms do not have the same amount of male & female in different stage 
+```{r}
+prop.table(table(dat$SEX, dat$ARMCD))
+
+ggplot(dat, aes(ARMCD, fill = SEX)) + 
+  geom_bar(stat = "count")
+
+
+
+
+
+# from ggplot, no obvious differences in sex between the two arms of the trial
+
+results <- chisq.test(table(dat$SEX, dat$ARMCD))
+# from chisq.test, p>0.05, fail to reject null. The 2 arms have the same amount of male & female in different stage 
+```
+### Problem 2.1: Check RACE
+check if 2 arms have the same amount of RACE in different stage 
+H0: The 2 arms have the same amount of RACE in different stage 
+H1: The 2 arms do not have the same amount of RACE in different stage 
+```{r}
+prop.table(table(dat$RACE, dat$ARMCD))
+
+ggplot(dat, aes(ARMCD, fill = RACE)) + 
+  geom_bar(stat = "count")
+
+# from the plot, Arm A does not have the race of AMERICAN INDIAN OR ALASKA NATIV, also otherraces distribution are different between the two arms of the trial
+
+fisher.test(table(dat$RACE, dat$ARMCD), simulate.p.value = TRUE)
+# from the fisher test, the p-value is greater than 0.05, so fail to reject null. The 2 arms have the same amount of RACE in different stage 
+```
+### Problem 2.1: Check ETHNIC
+
+```{r}
+prop.table(table(dat$ETHNIC, dat$ARMCD))
+
+ggplot(dat, aes(ARMCD, fill = ETHNIC)) + 
+  geom_bar(stat = "count")
+
+# from the ggplot, no obvious differences in ETHNIC  between the two arms of the trial
+
+results <- chisq.test(table(dat$ETHNIC, dat$ARMCD))
+
+
+# from chisq.test, p>0.05, fail to reject null. The 2 arms have the same amount of ETHNIC in different stage 
+
+```
+
+
+### Problem 2.1: Check baseline BECOG
+```{r}
+prop.table(table(dat$BECOG, dat$ARMCD))
+
+ggplot(dat, aes(ARMCD, fill = BECOG)) + 
+  geom_bar(stat = "count")
+
+# from the ggplot, no obvious differences in BECOG  between the two arms of the trial
+
+
+fisher.test(table(dat$BECOG, dat$ARMCD), simulate.p.value = TRUE)
+# from the fisher test, the p-value is greater than 0.05, so fail to reject null. The 2 arms have the same amount of BECOG in different stage 
+```
+
+
+
+
+## Problem 2.2：Are stage at diagnosis and histological grade at diagnosis different between the two groups? 
+### Problem 2.2.a. STAGE $ ARMCD: 
+check if 2 arms have the same amount of patients in different stage 
+H0: The 2 arms have the same amount of patients in different stage 
+H1: The 2 arms do not have the same amount of patients in different stage 
+```{r}
+prop.table(table(dat$STAGE, dat$ARMCD))
+
+ggplot(dat, aes(ARMCD, fill = STAGE)) + 
+  geom_bar(stat = "count")
+
+results <- chisq.test(table(dat$STAGE, dat$ARMCD))
+results
+# chi-square result shows p<0.05，reject H0，so 2 arms do not have the same amount of patients in different stage 
+```
+
+### Problem 2.2.b. HISTGRDE $ ARMCD: 
+check if 2 arms have the same amount of patients in each histological grade at diagnosis
+H0: The 2 arms have the same amount of patients in each histological grade at diagnosis
+H1: The 2 arms do not have the same amount of patients in each histological grade at diagnosis
+```{r}
+prop.table(table(dat$HISTGRDE, dat$ARMCD))
+
+ggplot(dat, aes(ARMCD, fill = HISTGRDE)) + 
+  geom_bar(stat = "count")
+
+results <- chisq.test(table(dat$HISTGRDE, dat$ARMCD))
+results$expected
+# The expected count of Low Grade is smaller than 5，so chi-square is not suitable. We choose fisher test.
+# fisher
+fisher.test(table(dat$HISTGRDE, dat$ARMCD), simulate.p.value = TRUE)
+
+# p>0.05，fail to reject H0，so 2 arms do not have the same amount of patients in each histological grade at diagnosis
+```
+
+
+## Problem 2.3： Is there a difference in outcomes for patients in different arms of the trial?
+### Problem 2.3.a: Check if the tumer size change has a difference for patients in different arms of the trial
+H0: There is no difference in tumer size change for patients in different arms of the trial
+H1: There is a difference in tumer size change for patients in different arms of the trial
+```{r}
+# first define the tumer_size_change
+dat <- dat %>%
+  mutate(
+    tumer_size_change = 100*(as.numeric(EOT_SUM_DIAMETER)-as.numeric(BL_SUM_DIAMETER))/(as.numeric(BL_SUM_DIAMETER)))
+
+# check if the distribution is normal, so we can decide to use t-test or wilcox test
+ggplot(dat, aes(tumer_size_change, fill = ARMCD)) + 
+  geom_density()
+shapiro.test(dat$tumer_size_change[dat$ARMCD == "A"])
+shapiro.test(dat$tumer_size_change[dat$ARMCD == "B"])
+# p<0.05，we reject null and states the data is not normal, we cannot use t test. Then we use wilcox.
+
+wilcox.test(tumer_size_change~ARMCD, dat)
+# p>0.05，fail to reject H0. There is no difference in tumer size change for patients in different arms of the trial
+```
+
+
+### Problem 2.3.b: Check if the best response has a difference for patients in different arms of the trial
+H0: There is no association in best response for patients in different arms of the trial
+H1: There is an association in best response for patients in different arms of the trial
+```{r}
+# set the response variable BESTRESP to be 0 or 1, (no tumer response or with tumer response)
+dat <- dat %>%
+  mutate(
+    BESTRESP = recode(as.character(BESTRESP), "PD" = "0", "SD" = "0", "NE" = "0", 
+                      "PR" = "1", "CR" = "1")
+  )
+
+prop.table(table(dat$BESTRESP, dat$ARMCD))
+
+ggplot(dat, aes(ARMCD, fill = BESTRESP)) + 
+  geom_bar(stat = "count")
+
+results <- chisq.test(table(dat$BESTRESP, dat$ARMCD))
+# chi-square result shows p<0.05，reject H0. There is no association in best response for patients in different arms of the trial
+
+```
+
+
+
+## Problem 3.1：What factors are associated with tumor response (binary)?
+
+```{r}
+# clean the data
+dat$EOT_SUM_DIAMETER=as.numeric(dat$EOT_SUM_DIAMETER)
+
+# drop NA
+dat=dat %>% filter(BL_SUM_DIAMETER!="NA") %>% filter(EOT_SUM_DIAMETER!="NA")
+dat=dat %>% filter(BESTRESP!="NA")
+
+
+
+# change y to numeric
+dat$BESTRESP = as.numeric(dat$BESTRESP)
+
+
+# in arm A, treatments include DOX+EVO
+# in arm B, treatments include DOX only
+mylogit <- glm(dat$BESTRESP ~ dat$ARMCD + AGE+RACE + ETHNIC, data = dat, family = "binomial")
+summary(mylogit)
+
+# interpretation
+# For ARMCDB, AGE, and RACEBLACK OR AFRICAN AMERICAN, the p-value is significant, so they are  associated with tumor response; and we can interprete them as 
+
+# If a patient belongs to arm B, it will decrease the log odds of getting a tumer response by 0.549;so arm A (DOX+EVO) gives more tumer response
+# Each 1 unit increase in AGE will decrease the log odds of getting a tumer response by 0.016
+# If a patient's race is BLACK OR AFRICAN AMERICAN, it will decrease the log odds of getting a tumer response by 3.20879
+```
+
+
+## Problem 3.2：What factors are associated With percent change in sum of tumor diameters (continuous)? 
+```{r}
+model2 <- lm(dat$tumer_size_change ~ dat$ARMCD + AGE+RACE + ETHNIC, data = dat)
+summary(model2)
+# no significant factor
+```
+
