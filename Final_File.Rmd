@@ -25,11 +25,48 @@ library(tidyr)
 library(amap)
 library(readxl)
 library(ggplot2)
+library(tableone)
+library(ggalluvial)
+```
 
+```{r}
 # load data
 dat <- read_xlsx("C:/Users/Lenovo/Desktop/Cornell Fall/Biostatistics/Project/sarcoma.xlsx", na = "NA")
 dat <- dat[complete.cases(dat),]
 ```
+
+## Q1
+
+```{r}
+CreateTableOne(strata = "ARMCD", data = dat)
+
+```
+
+```{r}
+plot_data <- dat %>% select (ID,ARMCD,STAGE,BESTRESP) %>%
+             group_by(ARMCD,STAGE,BESTRESP) %>%
+             summarise(COUNT = n()) %>% 
+             filter(STAGE != 'NA') %>% filter(BESTRESP!= 'NA',
+                                              BESTRESP!= 'NE') %>%
+             mutate(BESTRESP = recode(BESTRESP, 'PD'= 'Progressive Disease', 'PR' = 'Partial Response', 
+                                      'CR' = 'Complete Response', 'SD' = 'Stable Disease', 'NE' =
+                                      'Inevaluable'),
+                    ARMCD = recode(ARMCD, 'A' = 'DOX + EVO', 'B' = 'DOX'))
+
+
+ ggplot(plot_data,
+       aes(axis1 = STAGE,
+           axis2 = BESTRESP,
+           y = COUNT)) +
+  geom_alluvium(aes(fill = ARMCD),curve_type = "cubic") +
+  geom_stratum() +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)),size= 2.5) +
+  theme_void() +
+labs(title ="Participant Progression towards Response") +
+theme(plot.title = element_text(hjust = 0.5)) +
+guides(fill=guide_legend(title="Arms"))
+```
+
 
 # Problem 2
 
