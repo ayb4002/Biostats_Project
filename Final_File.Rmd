@@ -31,11 +31,16 @@ library(ggalluvial)
 
 ```{r}
 # load data
-dat <- read_xlsx("C:/Users/Lenovo/Desktop/Cornell Fall/Biostatistics/Project/sarcoma.xlsx", na = "NA")
+##dat <- read_xlsx("C:/Users/Lenovo/Desktop/Cornell Fall/Biostatistics/Project/sarcoma.xlsx", na = "NA")
+#dat <- dat[complete.cases(dat),]
+
+# load data
+setwd("C:/Users/Lenovo/Desktop/Cornell Fall/Data Science/Biostats_Project")
+dat <- read_xlsx("sarcoma.xlsx", na = "NA")
 dat <- dat[complete.cases(dat),]
 ```
 
-## Q1
+# Problem 1
 
 ```{r}
 CreateTableOne(strata = "ARMCD", data = dat)
@@ -83,14 +88,12 @@ ggplot(dat, aes(ARMCD, fill = SEX)) +
   geom_bar(stat = "count")
 
 
-
-
-
 # from ggplot, no obvious differences in sex between the two arms of the trial
 
 results <- chisq.test(table(dat$SEX, dat$ARMCD))
 # from chisq.test, p>0.05, fail to reject null. The 2 arms have the same amount of male & female in different stage 
 ```
+
 ### Problem 2.1: Check RACE
 check if 2 arms have the same amount of RACE in different stage 
 H0: The 2 arms have the same amount of RACE in different stage 
@@ -178,24 +181,24 @@ fisher.test(table(dat$HISTGRDE, dat$ARMCD), simulate.p.value = TRUE)
 
 
 ## Problem 2.3： Is there a difference in outcomes for patients in different arms of the trial?
-### Problem 2.3.a: Check if the tumer size change has a difference for patients in different arms of the trial
-H0: There is no difference in tumer size change for patients in different arms of the trial
-H1: There is a difference in tumer size change for patients in different arms of the trial
+### Problem 2.3.a: Check if the tumor size change has a difference for patients in different arms of the trial
+H0: There is no difference in tumor size change for patients in different arms of the trial
+H1: There is a difference in tumor size change for patients in different arms of the trial
 ```{r}
-# first define the tumer_size_change
+# first define the tumor_size_change
 dat <- dat %>%
   mutate(
-    tumer_size_change = 100*(as.numeric(EOT_SUM_DIAMETER)-as.numeric(BL_SUM_DIAMETER))/(as.numeric(BL_SUM_DIAMETER)))
+    tumor_size_change = 100*(as.numeric(EOT_SUM_DIAMETER)-as.numeric(BL_SUM_DIAMETER))/(as.numeric(BL_SUM_DIAMETER)))
 
 # check if the distribution is normal, so we can decide to use t-test or wilcox test
-ggplot(dat, aes(tumer_size_change, fill = ARMCD)) + 
+ggplot(dat, aes(tumor_size_change, fill = ARMCD)) + 
   geom_density()
-shapiro.test(dat$tumer_size_change[dat$ARMCD == "A"])
-shapiro.test(dat$tumer_size_change[dat$ARMCD == "B"])
+shapiro.test(dat$tumor_size_change[dat$ARMCD == "A"])
+shapiro.test(dat$tumor_size_change[dat$ARMCD == "B"])
 # p<0.05，we reject null and states the data is not normal, we cannot use t test. Then we use wilcox.
 
-wilcox.test(tumer_size_change~ARMCD, dat)
-# p>0.05，fail to reject H0. There is no difference in tumer size change for patients in different arms of the trial
+wilcox.test(tumor_size_change~ARMCD, dat)
+# p>0.05，fail to reject H0. There is no difference in tumor size change for patients in different arms of the trial
 ```
 
 
@@ -203,7 +206,7 @@ wilcox.test(tumer_size_change~ARMCD, dat)
 H0: There is no association in best response for patients in different arms of the trial
 H1: There is an association in best response for patients in different arms of the trial
 ```{r}
-# set the response variable BESTRESP to be 0 or 1, (no tumer response or with tumer response)
+# set the response variable BESTRESP to be 0 or 1, (no tumor response or with tumor response)
 dat <- dat %>%
   mutate(
     BESTRESP = recode(as.character(BESTRESP), "PD" = "0", "SD" = "0", "NE" = "0", 
@@ -221,7 +224,7 @@ results <- chisq.test(table(dat$BESTRESP, dat$ARMCD))
 ```
 
 
-
+# Problem 3
 ## Problem 3.1：What factors are associated with tumor response (binary)?
 
 ```{r}
@@ -246,16 +249,126 @@ summary(mylogit)
 # interpretation
 # For ARMCDB, AGE, and RACEBLACK OR AFRICAN AMERICAN, the p-value is significant, so they are  associated with tumor response; and we can interprete them as 
 
-# If a patient belongs to arm B, it will decrease the log odds of getting a tumer response by 0.549;so arm A (DOX+EVO) gives more tumer response
-# Each 1 unit increase in AGE will decrease the log odds of getting a tumer response by 0.016
-# If a patient's race is BLACK OR AFRICAN AMERICAN, it will decrease the log odds of getting a tumer response by 3.20879
+# If a patient belongs to arm B, it will decrease the log odds of getting a tumor response by 0.549;so arm A (DOX+EVO) gives more tumor response
+# Each 1 unit increase in AGE will decrease the log odds of getting a tumor response by 0.016
+# If a patient's race is BLACK OR AFRICAN AMERICAN, it will decrease the log odds of getting a tumor response by 3.20879
 ```
 
 
 ## Problem 3.2：What factors are associated With percent change in sum of tumor diameters (continuous)? 
 ```{r}
-model2 <- lm(dat$tumer_size_change ~ dat$ARMCD + AGE+RACE + ETHNIC, data = dat)
+model2 <- lm(dat$tumor_size_change ~ dat$ARMCD + AGE+RACE + ETHNIC, data = dat)
 summary(model2)
 # no significant factor
 ```
+
+
+# Problem 4
+## Problem 4.1: What conclusions can you make about the treatments’ effects on tumor response and percent change in sum of tumor diameters? 
+
+
+treatments’ effects on tumor response: According to the logistic regression function we did in Problem 3.1, if a patient belongs to arm B, it will decrease the log odds of getting a tumor response by 0.549; so arm A (DOX+EVO) gives more tumor response.
+
+treatments’ effects on percent change in sum of tumor diameters: According to the linear regression function we did in Problem 3.2, there is no significant factor are associated with percent change in sum of tumor diameters.
+
+
+
+
+## Problem 4.2:Potential differential treatment effects in subgroups of patients (e.g., gender, race, age groups, etc.)
+
+### for subgroup SEX, if treatment allocation (ARMCD) cause a change on the outcome (Best response & tumor size change)
+```{r}
+# split data by sex
+dat_female=dat%>%filter(SEX=="F")
+dat_male=dat%>%filter(SEX=="M")
+
+# check treatment effects in Best response
+female_logit <- glm(dat_female$BESTRESP ~ dat_female$ARMCD, data = dat_female, family = "binomial")
+summary(female_logit)
+# for female, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor response in female. 
+
+male_logit <- glm(dat_male$BESTRESP ~ dat_male$ARMCD, data = dat_male, family = "binomial")
+summary(male_logit)
+# for male, the p-value of the treatment allocation (ARMCD) is significant, so ARMCD does cause a change on the tumor response in male. If a male patient belongs to arm B, it will decrease the log odds of getting a tumor response by 0.61.
+
+
+# check treatment effects in tumor size change 
+female_lm <- lm(dat_female$tumor_size_change ~ dat_female$ARMCD, data = dat_female)
+summary(female_lm)
+# for female, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor size in female. 
+
+
+male_lm <- lm(dat_male$tumor_size_change ~ dat_male$ARMCD, data = dat_male)
+summary(male_lm)
+# For male,the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor size in female. 
+```
+
+### for subgroup RACE, if treatment allocation (ARMCD) cause a change on the outcome (Best response & tumor size change)
+```{r}
+# split data by the top 3 representative race
+dat_white=dat%>%filter(RACE=="WHITE")
+dat_black=dat%>%filter(RACE=="BLACK OR AFRICAN AMERICAN")
+dat_asia=dat%>%filter(RACE=="ASIAN")
+
+
+# check treatment effects in Best response
+white_logit <- glm(BESTRESP ~ ARMCD, data = dat_white, family = "binomial")
+summary(white_logit)
+# for white race, the p-value of the treatment allocation (ARMCD) is significant, so ARMCD does cause a change on the tumor response in female. 
+# If a white patient belongs to arm B, it will decrease the log odds of getting a tumor response by 0.51
+
+black_logit <- glm(BESTRESP ~ ARMCD, data = dat_black, family = "binomial")
+summary(black_logit)
+# for black race, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor response in black race.
+
+asia_logit <- glm(BESTRESP ~ ARMCD, data = dat_asia, family = "binomial")
+summary(asia_logit)
+# for Asian race, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor response in asia race.
+
+# check treatment effects in tumor size change 
+white_logit <- lm(tumor_size_change ~ ARMCD, data = dat_white)
+summary(white_logit)
+# for white race, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor size in white race.
+
+black_logit <- lm(tumor_size_change ~ ARMCD, data = dat_black)
+summary(black_logit)
+# for black race, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor size in balck race.
+
+asia_logit <- lm(tumor_size_change ~ ARMCD, data = dat_asia)
+summary(asia_logit)
+# for black race, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor size in asian race.
+
+```
+
+### for subgroup Age groups, if treatment allocation (ARMCD) cause a change on the outcome (Best response & tumor size change)
+```{r}
+# split the data by 2 age groups
+dat <- dat %>%
+  mutate(
+    age_group= ifelse(AGE > 60, "older than 60", "younger or equal to 60") )
+
+dat_young=dat%>%filter(age_group=="younger or equal to 60")
+dat_old=dat%>%filter(age_group=="older than 60")
+
+# check treatment effects in Best response
+young_logit <- glm(BESTRESP ~ ARMCD, data = dat_young, family = "binomial")
+summary(young_logit)
+# for people younger or equal to 60, the p-value of the treatment allocation (ARMCD) is significant, so ARMCD does cause a change on the tumor response. If a patient who is younger or equal to 60 and belongs to arm B, it will decrease the log odds of getting a tumor response by 0.78.
+
+old_logit <- glm(BESTRESP ~ ARMCD, data = dat_old, family = "binomial")
+summary(old_logit)
+# for people older than 60 male, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor response in older people.
+
+
+# check treatment effects in tumor size change 
+young_lm <- lm(tumor_size_change ~ ARMCD, data = dat_young)
+summary(young_lm)
+# for people younger or equal to 60, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor size in female. 
+
+
+old_lm <- lm(tumor_size_change ~ ARMCD, data = dat_old)
+summary(old_lm)
+# For people older than 60,the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor size in female. 
+```
+
 
