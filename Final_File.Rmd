@@ -14,11 +14,14 @@ output:
     fig_width: 3.5
   word_document:
     toc: no
+  pdf_document:
+    toc: no
+    toc_depth: '5'
 ---
 
 ```{r,echo=FALSE}
 knitr::opts_chunk$set(cache=TRUE, error=FALSE, message=FALSE, warning=FALSE,
-                      echo=T, tidy.opts=list(width.cutoff=60),tidy=TRUE)
+                      echo=T,tidy=TRUE)
 library(tidyverse)
 library(here)
 library(tidyr)
@@ -81,8 +84,8 @@ sarcoma %>%
   filter(BESTRESP != "NA") %>% 
   ggplot(aes(BESTRESP, AGE, fill=BESTRESP)) + geom_boxplot() + theme_bw() + 
   stat_summary(fun='mean',geom='point', shape=23, size=3, fill='white') + 
-  theme(legend.position = "none") +
-  scale_x_discrete(labels=c('Complete \nresponse', 'Inevaluable', 'Progressive \ndisease', 'Partial \nresponse', 'Stable \ndisease')) + labs(x='', title='Best Response groups by age')
+  theme(legend.position = "none",plot.title = element_text(hjust = 0.5)) +
+  scale_x_discrete(labels=c('Complete \nresponse', 'Progressive \ndisease', 'Partial \nresponse', 'Stable \ndisease')) + labs(x='', title='Best Response groups by age')
 ```
 
 
@@ -105,6 +108,7 @@ ggplot(dat, aes(ARMCD, fill = SEX)) +
 # from ggplot, no obvious differences in sex between the two arms of the trial
 
 results <- chisq.test(table(dat$SEX, dat$ARMCD))
+results
 # from chisq.test, p>0.05, fail to reject null. The 2 arms have the same amount of male & female in different stage 
 ```
 
@@ -206,7 +210,7 @@ dat <- dat %>%
 
 # check if the distribution is normal, so we can decide to use t-test or wilcox test
 ggplot(dat, aes(tumor_size_change, fill = ARMCD)) + 
-  geom_density()
+  geom_density(alpha=0.5)
 shapiro.test(dat$tumor_size_change[dat$ARMCD == "A"])
 shapiro.test(dat$tumor_size_change[dat$ARMCD == "B"])
 # p<0.05，we reject null and states the data is not normal, we cannot use t test. Then we use wilcox.
@@ -233,6 +237,7 @@ ggplot(dat, aes(ARMCD, fill = BESTRESP)) +
   geom_bar(stat = "count")
 
 results <- chisq.test(table(dat$BESTRESP, dat$ARMCD))
+results
 # chi-square result shows p<0.05，reject H0. There is no association in best response for patients in different arms of the trial
 
 ```
@@ -247,7 +252,12 @@ dat$EOT_SUM_DIAMETER=as.numeric(dat$EOT_SUM_DIAMETER)
 
 # drop NA
 dat=dat %>% filter(BL_SUM_DIAMETER!="NA") %>% filter(EOT_SUM_DIAMETER!="NA")
-dat=dat %>% filter(BESTRESP!="NA")
+dat=dat %>% filter(BESTRESP!="NA")  %>%
+  mutate(
+    age_group= ifelse(AGE > 60, "older than 60", "younger or equal to 60") )
+
+dat_young=dat%>%filter(age_group=="younger or equal to 60")
+dat_old=dat%>%filter(age_group=="older than 60")
 
 
 
@@ -257,8 +267,10 @@ dat$BESTRESP = as.numeric(dat$BESTRESP)
 
 # in arm A, treatments include DOX+EVO
 # in arm B, treatments include DOX only
-mylogit <- glm(dat$BESTRESP ~ dat$ARMCD + AGE+RACE + ETHNIC, data = dat, family = "binomial")
+mylogit <- glm(dat$BESTRESP ~ dat$ARMCD + age_group +RACE + ETHNIC, data = dat, family = "binomial")
 summary(mylogit)
+
+mylogit$coefficients %>% exp()
 
 # interpretation
 # For ARMCDB, AGE, and RACEBLACK OR AFRICAN AMERICAN, the p-value is significant, so they are  associated with tumor response; and we can interprete them as 
@@ -273,6 +285,7 @@ summary(mylogit)
 ```{r}
 model2 <- lm(dat$tumor_size_change ~ dat$ARMCD + AGE+RACE + ETHNIC, data = dat)
 summary(model2)
+
 # no significant factor
 ```
 
