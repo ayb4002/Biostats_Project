@@ -32,7 +32,7 @@ library(tableone)
 library(ggalluvial)
 ```
 
-```{r}
+```{r, include=FALSE}
 # load data
 ##dat <- read_xlsx("C:/Users/Lenovo/Desktop/Cornell Fall/Biostatistics/Project/sarcoma.xlsx", na = "NA")
 #dat <- dat[complete.cases(dat),]
@@ -49,13 +49,13 @@ sarcoma <- sarcoma[complete.cases(sarcoma),]
 
 # Problem 1:  What are the descriptive characteristics of our sample?  
 
-```{r}
+```{r, include=FALSE}
 # Creating TableOne to understand the statistics of each parameter in the data
 
 CreateTableOne(strata = "ARMCD", data = dat)
 ```
 
-```{r}
+```{r, include=FALSE}
 plot_data <- dat %>% select (ID,ARMCD,STAGE,BESTRESP) %>%
              group_by(ARMCD,STAGE,BESTRESP) %>%
              summarise(COUNT = n()) %>% 
@@ -80,7 +80,7 @@ theme(plot.title = element_text(hjust = 0.5)) +
 guides(fill=guide_legend(title="Arms"))
 ```
 
-```{r}
+```{r, include=FALSE}
 sarcoma %>% 
   filter(BESTRESP != "NA") %>% 
   ggplot(aes(BESTRESP, AGE, fill=BESTRESP)) + geom_boxplot() + theme_bw() + 
@@ -96,10 +96,10 @@ sarcoma %>%
 ## Problem 2.1：Are there any differences in baseline characteristics between the two arms of the trial?
 
 ### Problem 2.1: Check SEX
-check if 2 arms have the same amount of male & female in different stage 
-H0: The 2 arms have the same amount of male & female in different stage 
-H1: The 2 arms do not have the same amount of male & female in different stage 
-```{r}
+check if 2 arms have the same amount of male & female in different arms 
+H0: The 2 arms have the same amount of male & female in different arms 
+H1: The 2 arms do not have the same amount of male & female in different arms 
+```{r, include=FALSE}
 prop.table(table(dat$SEX, dat$ARMCD))
 
 ggplot(dat, aes(ARMCD, fill = SEX)) + 
@@ -114,10 +114,10 @@ results
 ```
 
 ### Problem 2.1: Check RACE
-check if 2 arms have the same amount of RACE in different stage 
-H0: The 2 arms have the same amount of RACE in different stage 
-H1: The 2 arms do not have the same amount of RACE in different stage 
-```{r}
+check if 2 arms have the same amount of RACE in different arms 
+H0: The 2 arms have the same amount of RACE in different arms 
+H1: The 2 arms do not have the same amount of RACE in different arms 
+```{r, include=FALSE}
 prop.table(table(dat$RACE, dat$ARMCD))
 
 ggplot(dat, aes(ARMCD, fill = RACE)) + 
@@ -130,7 +130,7 @@ fisher.test(table(dat$RACE, dat$ARMCD), simulate.p.value = TRUE)
 ```
 ### Problem 2.1: Check ETHNIC
 
-```{r}
+```{r, include=FALSE}
 prop.table(table(dat$ETHNIC, dat$ARMCD))
 
 ggplot(dat, aes(ARMCD, fill = ETHNIC)) + 
@@ -147,7 +147,7 @@ results <- chisq.test(table(dat$ETHNIC, dat$ARMCD))
 
 
 ### Problem 2.1: Check baseline BECOG
-```{r}
+```{r, include=FALSE}
 prop.table(table(dat$BECOG, dat$ARMCD))
 
 ggplot(dat, aes(ARMCD, fill = BECOG)) + 
@@ -168,7 +168,7 @@ fisher.test(table(dat$BECOG, dat$ARMCD), simulate.p.value = TRUE)
 check if 2 arms have the same amount of patients in different stage 
 H0: The 2 arms have the same amount of patients in different stage 
 H1: The 2 arms do not have the same amount of patients in different stage 
-```{r}
+```{r, include=FALSE}
 prop.table(table(dat$STAGE, dat$ARMCD))
 
 ggplot(dat, aes(ARMCD, fill = STAGE)) + 
@@ -183,13 +183,27 @@ results
 check if 2 arms have the same amount of patients in each histological grade at diagnosis
 H0: The 2 arms have the same amount of patients in each histological grade at diagnosis
 H1: The 2 arms do not have the same amount of patients in each histological grade at diagnosis
-```{r}
-prop.table(table(dat$HISTGRDE, dat$ARMCD))
+```{r, include=FALSE}
+dat_grade <- dat %>%
+  mutate(
+    HISTGRDE = recode(as.character(HISTGRDE), 
+                      "Grade 4" = "High Grade", 
+                      "Grade 2" = "Intermediate Grade", 
+                      "Grade 3" = "Intermediate Grade", 
+                      "Grade 2/3" = "Intermediate Grade", 
+                      "Grade 1" = "Low Grade")
+  )
 
-ggplot(dat, aes(ARMCD, fill = HISTGRDE)) + 
-  geom_bar(stat = "count")
+prop.table(table(dat_grade$HISTGRDE, dat_grade$ARMCD))
 
-results <- chisq.test(table(dat$HISTGRDE, dat$ARMCD))
+dat_grade %>% ggplot(aes(y = HISTGRDE, fill = ARMCD)) +
+  geom_bar(stat = "count") +
+  theme_bw() +
+  labs(title = "Bar Plot of Histological Grade in 2 Arms") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+results <- chisq.test(table(dat_grade$HISTGRDE, dat_grade$ARMCD))
 results$expected
 # The expected count of Low Grade is smaller than 5，so chi-square is not suitable. We choose fisher test.
 # fisher
@@ -203,7 +217,7 @@ fisher.test(table(dat$HISTGRDE, dat$ARMCD), simulate.p.value = TRUE)
 ### Problem 2.3.a: Check if the tumor size change has a difference for patients in different arms of the trial
 H0: There is no difference in tumor size change for patients in different arms of the trial
 H1: There is a difference in tumor size change for patients in different arms of the trial
-```{r}
+```{r, include=FALSE}
 # first define the tumor_size_change
 dat <- dat %>%
   mutate(
@@ -224,7 +238,7 @@ wilcox.test(tumor_size_change~ARMCD, dat)
 ### Problem 2.3.b: Check if the best response has a difference for patients in different arms of the trial
 H0: There is no association in best response for patients in different arms of the trial
 H1: There is an association in best response for patients in different arms of the trial
-```{r}
+```{r, include=FALSE}
 # set the response variable BESTRESP to be 0 or 1, (no tumor response or with tumor response)
 dat <- dat %>%
   mutate(
@@ -247,7 +261,7 @@ results
 # Problem 3
 ## Problem 3.1：What factors are associated with tumor response (binary)?
 
-```{r}
+```{r, include=FALSE}
 # clean the data
 dat$EOT_SUM_DIAMETER=as.numeric(dat$EOT_SUM_DIAMETER)
 
@@ -283,7 +297,7 @@ mylogit$coefficients %>% exp()
 
 ## Alternate Model
 
-```{r}
+```{r, include=FALSE}
 # clean the data
 dat$EOT_SUM_DIAMETER=as.numeric(dat$EOT_SUM_DIAMETER)
 
@@ -324,7 +338,7 @@ mylogit$coefficients %>% exp()
 
 
 ## Problem 3.2：What factors are associated With percent change in sum of tumor diameters (continuous)? 
-```{r}
+```{r, include=FALSE}
 model2 <- lm(dat$tumor_size_change ~ dat$ARMCD + AGE+RACE + ETHNIC, data = dat)
 summary(model2)
 
@@ -346,7 +360,7 @@ treatments’ effects on percent change in sum of tumor diameters: According to 
 ## Problem 4.2:Potential differential treatment effects in subgroups of patients (e.g., gender, race, age groups, etc.)
 
 ### for subgroup SEX, if treatment allocation (ARMCD) cause a change on the outcome (Best response & tumor size change)
-```{r}
+```{r, include=FALSE}
 # split data by sex
 dat_female=dat%>%filter(SEX=="F")
 dat_male=dat%>%filter(SEX=="M")
@@ -373,7 +387,7 @@ summary(male_lm)
 ```
 
 ### for subgroup RACE, if treatment allocation (ARMCD) cause a change on the outcome (Best response & tumor size change)
-```{r}
+```{r, include=FALSE}
 # split data by the top 3 representative race
 dat_white=dat%>%filter(RACE=="WHITE")
 dat_black=dat%>%filter(RACE=="BLACK OR AFRICAN AMERICAN")
@@ -410,7 +424,7 @@ summary(asia_logit)
 ```
 
 ### for subgroup Age groups, if treatment allocation (ARMCD) cause a change on the outcome (Best response & tumor size change)
-```{r}
+```{r, include=FALSE}
 # split the data by 2 age groups
 dat <- dat %>%
   mutate(
