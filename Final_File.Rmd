@@ -47,11 +47,12 @@ sarcoma <- sarcoma[complete.cases(sarcoma),]
 
 ```
 
-# Problem 1
+# Problem 1:  What are the descriptive characteristics of our sample?  
 
 ```{r}
-CreateTableOne(strata = "ARMCD", data = dat)
+# Creating TableOne to understand the statistics of each parameter in the data
 
+CreateTableOne(strata = "ARMCD", data = dat)
 ```
 
 ```{r}
@@ -268,6 +269,47 @@ dat$BESTRESP = as.numeric(dat$BESTRESP)
 # in arm A, treatments include DOX+EVO
 # in arm B, treatments include DOX only
 mylogit <- glm(dat$BESTRESP ~ dat$ARMCD + age_group +RACE + ETHNIC, data = dat, family = "binomial")
+summary(mylogit)
+
+mylogit$coefficients %>% exp()
+
+# interpretation
+# For ARMCDB, AGE, and RACEBLACK OR AFRICAN AMERICAN, the p-value is significant, so they are  associated with tumor response; and we can interprete them as 
+
+# If a patient belongs to arm B, it will decrease the log odds of getting a tumor response by 0.549;so arm A (DOX+EVO) gives more tumor response
+# Each 1 unit increase in AGE will decrease the log odds of getting a tumor response by 0.016
+# If a patient's race is BLACK OR AFRICAN AMERICAN, it will decrease the log odds of getting a tumor response by 3.20879
+```
+
+## Alternate Model
+
+```{r}
+# clean the data
+dat$EOT_SUM_DIAMETER=as.numeric(dat$EOT_SUM_DIAMETER)
+
+# drop NA
+dat=dat %>% filter(BL_SUM_DIAMETER!="NA") %>% filter(EOT_SUM_DIAMETER!="NA")
+dat=dat %>% filter(BESTRESP!="NA")  %>%
+  mutate(
+    age_group= ifelse(AGE > 60, "older than 60", "younger or equal to 60") )
+
+dat_young=dat%>%filter(age_group=="younger or equal to 60")
+dat_old=dat%>%filter(age_group=="older than 60")
+
+
+
+# change y to numeric
+dat$BESTRESP = as.numeric(dat$BESTRESP)
+dat$HISTGRP = as.factor(dat$HISTGRP)
+dat$STAGE = as.factor(dat$STAGE)
+dat$PRADFL = as.factor(dat$PRADFL)
+dat$PCHEMFL = as.factor(dat$PCHEMFL)
+
+
+
+# in arm A, treatments include DOX+EVO
+# in arm B, treatments include DOX only
+mylogit <- glm(dat$BESTRESP ~ dat$ARMCD + age_group +RACE + ETHNIC + HISTGRP + STAGE + PRADFL + PCHEMFL, data = dat, family = "binomial")
 summary(mylogit)
 
 mylogit$coefficients %>% exp()
