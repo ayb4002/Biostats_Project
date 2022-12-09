@@ -33,7 +33,7 @@ library(ggalluvial)
 library(ggpubr)
 ```
 
-## Introduction
+### 1. Introduction
 
 Soft tissue sarcomas (STS) is a general term for tumors that begin in soft tissues. These tumors can form anywhere in the body but are most common in the legs, chest, and arms (NIH, 2016) . A typical treatment for STS is the doxorubicin (DOX) treatment (Verschoor, 2020).
 
@@ -44,7 +44,7 @@ The primary research question is whether the tumor response is improved for pati
 Lastly, the data was provided by sarcoma experts and members of the Sarcoma Alliance for Research through Collaboration (SARC). Histological grade at diagnosis.
 
 
-## Methodology
+### 2. Methodology
 
 The dataset was obtained between Sept 26, 2011, and Jan 22, 2014. In a randomized control trial, 640 patients were randomly assigned to a treatment group (317 received DOX + EVO, while 323 received DOX alone). They included Patients 15 years or older with a diagnosis of an advanced unresectable or metastatic soft-tissue sarcoma, of intermediate or high grade, for which no standard curative therapy was available. Patients who had received previous systemic therapy for advanced or other certain diseases were excluded.
 
@@ -54,7 +54,7 @@ Then we decided to use both logistic and linear regression to evaluate the tumor
 To investigate what factors are associated with tumor response, we implemented a logistic regression model as the response variable tumor response (BESRESP) is a binary variable. It has either “0” (no tumor response ) or “1” (with tumor response). To investigate what factors are associated with percent change in the sum of tumor diameters, we used a linear regression model as the response variable tumor_size_change is continuous. 
 
 
-## Analysis 
+### 3. Analysis 
 
 ```{r, echo=FALSE}
 # Loading Data
@@ -66,7 +66,7 @@ sarcoma <-  read_xlsx("sarcoma.xlsx", na = "NA")
 sarcoma <- sarcoma[complete.cases(sarcoma),]
 ```
 
-# Problem 1:  What are the descriptive characteristics of our sample?  
+#### 3.1. What are the descriptive characteristics of our sample?  
 
 ```{r, echo=FALSE}
 # Cleaning Data
@@ -136,11 +136,9 @@ labs(x='', title='Best Response groups by age')
 We see from the box plots that patients outcomes with respect to age give very similar results. 
 
 
-# Problem 2
+#### 3.2. Are there any differences in baseline characteristics between the two arms of the trial?
 
-## Problem 2.1：Are there any differences in baseline characteristics between the two arms of the trial?
-
-### Problem 2.1.1: Checking Gender
+##### 3.2.1 Checking Gender
 
 check if the two arms have the same proportion of male & female in different arms 
 
@@ -167,7 +165,7 @@ The bar plot of the proportion of patients by gender shows that the number of ma
 
 From Pearson’s chi-squared test, the p-value is 0.9689, which is greater than the 0.05 significance level, so we fail to reject the null hypothesis. Therefore, we conclude that the two arms have the same proportion of males and females respectively in different arms. 
 
-### Problem 2.1.2: Checking Race
+##### 3.2.2 Checking Race
 
 check if two arms have the same proportion of race in different arms 
 
@@ -191,7 +189,7 @@ fisher.test(table(dat$RACE, dat$ARMCD), simulate.p.value = TRUE)
 
 We generate a bar plot of the proportion of race distribution. White people are the majority of the patients in this study, which accounts for 82.16%. By fisher’s exact test, the p-value is 0.1919, greater than the significance level. Hence we accept the null hypothesis that both arms have the same proportion of races.
 
-### Problem 2.1.3: Checking Ethnicity
+##### 3.2.3. Checking Ethnicity
 
 check if two arms have the same proportion of ethnicity in different arms 
 
@@ -218,9 +216,9 @@ chisq.test(table(dat$ETHNIC, dat$ARMCD))
 
 We generate a bar plot of the proportion of ethnicity distribution. Majority of the patients are not hispanic or latino in this study. By Pearson's Chi-squared test, the p-value is 0.992, greater than the significance level. Hence we accept the null hypothesis that both arms have the same proportions of ethnicities.
 
-## Problem 2.2：Are stage at diagnosis and histological grade at diagnosis different between the two groups? 
+#### 3.3. Are stage at diagnosis and histological grade at diagnosis different between the two groups? 
 
-### Problem 2.2.1. STAGE $ ARMCD: 
+##### 3.3.1. STAGE & ARMCD
 
 check if two arms have the same proportion of patients in different stages
 
@@ -243,7 +241,7 @@ chisq.test(table(dat$STAGE, dat$ARMCD))
 
 To test if there is a difference in outcomes for patients in different arms of the trial, stage at diagnosis and best response are considered at first. In the bar plot of patients in each stage by arms, patients in arm A resulting in stage III is slightly more than those in arm B. However, patients in arm A resulting in other stages are slightly less than those in arm B. By Pearson's Chi-squared test, the p-value is 0.02, less than the significance level. Hence we accept the alternate hypothesis that the two treatment arms do not have the same proportion of patients in different stages.
 
-### Problem 2.2.2. HISTGRDE $ ARMCD: 
+##### 3.3.2. HISTGRDE & ARMCD
 check if two arms have the same amount of patients in each histological grade at diagnosis
 
 H0: The two arms have the same amount of patients in each histological grade at diagnosis
@@ -285,8 +283,9 @@ Grade 1 is defined as low, grade 4 is defined as high, and other 3 grades, inclu
 Most patients have intermediate histological grades at diagnosis, then have high grades. 
 By using the fisher’s test, as the p-value is 0.4893 for this test, which is greater than the 0.05 significance level, we fail to reject the null hypothesis, leading to the conclusion that two arms have the same number of patients in each histological grade at diagnosis.
 
-## Problem 2.3： Is there a difference in outcomes for patients in different arms of the trial?
+#### 3.4. Is there a difference in outcomes for patients in different arms of the trial?
 
+##### 3.4.1. Tumor size change
 Check if the tumor size change has a difference for patients in different arms of the trial
 
 H0: There is no difference in tumor size change for patients in different arms of the trial
@@ -315,9 +314,9 @@ wilcox.test(tumor_size_change~ARMCD, dat)
 
 We check for normality in the data using Shapiro-Wilk normality test. We see that for outcomes of both arms the distribution is not normal. Hence we perform non-parametric Wilcoxon rank sum test to compare the tumor outcomes of the two different arms. 
 
-As the p value is greater than the 0.05 significance level, we accept the null hypothesis, leading to the conclusion that there is no difference in tumor size change for patients in different arms of the trial.
+As the p-value is greater than the 0.05 significance level, we accept the null hypothesis, leading to the conclusion that there is no difference in tumor size change for patients in different arms of the trial.
 
-
+##### 3.4.2. Best response in 2 arms
 Check if the best response has a difference for patients in different arms of the trial
 
 H0: There is no association in best response for patients in different arms of the trial
@@ -348,11 +347,10 @@ chisq.test(table(dat$BESTRESP, dat$ARMCD))
 To test if there is a difference in outcomes for patients in different arms of the trial, best response is considered. Patients are divided into two groups of best response, no tumor response (stable disease, progressive disease, and inevaluable) and tumor response (partial response and complete response). The number of people with tumor response in arm A is more than those in arm B. The p-values from Pearson’s chi-squared test for the test is smaller than the 0.05 significance level. Hence, we reject the null hypothesis and accept the alternate hypothesis, leading to the conclusion that there is an association in best response for patients in different arms of the trial.
 
 
-# Problem 3
 
-## Problem 3.1: What factors are associated with tumor response (binary)?
+#### 3.5. What factors are associated with tumor response (binary)?
 
-Logistic Model 1: Considering only Patient Demographics 
+##### 3.5.1. Logistic Model 1: Considering only Patient Demographics 
 
 ```{r, echo=FALSE}
 # clean the data
@@ -389,7 +387,7 @@ We can also interpret the results using Odds ratio:
 2. If a patient's race is BLACK OR AFRICAN AMERICAN, the odds of getting a tumor response is 0.04. It is significantly less than the other groups. American Indian or Alaska Native is taken as reference.
 
 
-Logistic Model 2: Considering Patient Demographics and Treatment Baseline and Pathway
+##### 3.5.2. Logistic Model 2: Considering Patient Demographics and Treatment Baseline and Pathway
 
 ```{r, echo=FALSE}
 # clean the data
@@ -419,15 +417,15 @@ summary(mylogit)
 
 From the logistic regression model, we see that the p-values for ARMCDB, and RACEBLACK OR AFRICAN AMERICAN are significant, indicating that they are associated with tumor response. We can interpret them as:
 
-1. If a patient belongs to Arm B, it will decrease the log odds of getting a tumor response by 0.626; so arm A (DOX+EVO) gives more tumor response Arm A is taken as reference.
+1. If a patient belongs to Arm B, it will decrease the log odds of getting a tumor response by 0.626; so arm A (DOX+EVO) gives more tumor response. Arm A is taken as reference.
 2. If a patient's race is BLACK OR AFRICAN AMERICAN, it will decrease the log odds of getting a tumor response by 3.47. American Indian or Alaska Native is taken as reference.
 
 We can also interpret the results suing Odds ratio:
 
-1. If a patient belongs to Arm B, the odds of getting a tumor response by 0.534; so arm A (DOX+EVO) gives more tumor response
+1. If a patient belongs to Arm B, the odds of getting a tumor response by 0.534; so arm A (DOX+EVO) gives more tumor response.
 2. If a patient's race is BLACK OR AFRICAN AMERICAN, it will decrease the log odds of getting a tumor response by 3.47
 
-## Problem 3.2：What factors are associated With percent change in sum of tumor diameters (continuous)? 
+#### 3.6. What factors are associated With percent change in sum of tumor diameters (continuous)? 
 
 ```{r, echo=FALSE}
 model2 <- lm(dat$tumor_size_change ~ dat$ARMCD + AGE+RACE + ETHNIC, data = dat)
@@ -437,18 +435,18 @@ summary(model2)
 No statistical significant factor. Also the model is not a good fitting model as most of the variables in our dataset are categorical.
 
 
-# Problem 4
+### 4. Results 
 
-## Problem 4.1: What conclusions can you make about the treatments’ effects on tumor response and percent change in sum of tumor diameters? 
+#### 4.1. What conclusions can you make about the treatments’ effects on tumor response and percent change in sum of tumor diameters? 
 
 Treatment effect on tumor response: According to the logistic regression function we did in Problem 3.1, if a patient belongs to arm B, it will decrease the log odds of getting a tumor response by 0.554; so arm A (DOX+EVO) gives higher tumor response.
 
 Treatment effect on percent change in tumor diameters: According to the linear regression function we did in Problem 3.2, there is no significant factor associated with percent change in tumor diameters.
 
 
-## Problem 4.2: Potential differential treatment effects in subgroups of patients (e.g., gender, race, age groups, etc.)
+#### 4.2. Potential differential treatment effects in subgroups of patients (e.g., gender, race, age groups, etc.)
 
-### For subgroup Gender, if treatment allocation (ARMCD) cause a change on the outcome (Best response)
+##### 4.2.1. For subgroup Gender, if treatment allocation (ARMCD) cause a change on the outcome (Best response)
 
 ```{r, echo=FALSE}
 # split data by sex
@@ -470,7 +468,7 @@ Logistic Regression Model of Response as a function of arm of treatment. The dat
 We see that males show statistical significance with treatment arms. The log odds of getting a positive outcome is reduced by .608 when males use Arm B. No such significance found for females. 
 
 
-### For subgroup race, if treatment allocation (ARMCD) cause a change on the outcome (Best response)
+##### 4.2.2. For subgroup race, if treatment allocation (ARMCD) cause a change on the outcome (Best response)
 
 ```{r, echo=FALSE}
 # split data by the top 3 representative race
@@ -500,7 +498,7 @@ Logistic Regression Model of Response as a function of arm of treatment. The dat
 We see that white and black participants show statistical significance with treatment arms. For white participants, the log odds of getting a positive outcome is reduced by .519 when white participants use Arm B. For black participants, the log odds of getting a positive outcome is reduced by .319 when black participants use Arm B.
 
 
-### For subgroup Age groups, if treatment allocation (ARMCD) cause a change on the outcome (Best response)
+##### 4.2.3. For subgroup Age groups, if treatment allocation (ARMCD) cause a change on the outcome (Best response)
 
 ```{r, echo=FALSE}
 # split the data by 2 age groups
@@ -526,20 +524,18 @@ Logistic Regression Model of Response as a function of arm of treatment. The dat
 We see that participants younger or equal to 60 show statistical significance with treatment arms. The log odds of getting a positive outcome is reduced by .78 when participants use Arm B. No statistical significance for participants older than 60.
 
 
-## Conclusions
+### 5. Conclusions
 
-1. Drug combination group (DOX + EVO) gives more tumor response than mono (DOX) treatment.
-2. No significant factors associated with percent change in tumor diameters using linear regression. 
-3. If the patient is male, or belongs to white race, or younger or equal to 60, they would experience more tumor response if they are receiving treatment DOX + EVO. But this effect is not significant in females, other races, and patients who are older than 60. 
+According to the analysis, we can drive to the conclusion that drug combination group (DOX + EVO) gives more tumor  response than mono (DOX) treatment. However, there is no significant factor associated with percent change in tumor diameters by using linear regression. To specify, if a patient is male, or belongs to white race, or younger or equal to 60 years old, the individual would experience more tumor response if receiving treatment DOX + EVO, while keeping other factors fixed.
 
 
-## Limitations
+### 6. Limitations
 
-1. We observed a significantly higher proportion of white ethnicity participants in the study. This can lead to biased outcomes. 
-2. The patients’ stages at diagnosis are not equally allocated in the two arms. There are more patients in stage III at diagnosis. This may also lead to biased outcomes.
+There still would be some limitations for this study. Firstly, a significantly higher proportion of white ethnicity participants is observed. This can lead to biased outcomes. Also, the patients' stages at diagnosis are not equally allocated in the two arms. There are more patients in stage III at diagnosis. This may be another factor leading to biased outcomes.
 
 
-## References
+
+### 7. References
 
 1. Verschoor, Arie Jan, et al. "Survival of soft tissue sarcoma patients after completing six cycles of first-line anthracycline containing treatment: an EORTC-STBSG database study." Clinical sarcoma research 10.1 (2020): 1-9.
 2. Tseng, William W., Behrang Amini, and John E. Madewell. "Follow‐up of the soft tissue sarcoma patient." Journal of surgical oncology 111.5 (2015): 641-645.
