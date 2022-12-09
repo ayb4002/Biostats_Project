@@ -19,7 +19,7 @@ output:
     toc_depth: '5'
 ---
 
-```{r,echo=FALSE}
+```{r,echo=FALSE,warning=FALSE}
 knitr::opts_chunk$set(cache=TRUE, error=FALSE, message=FALSE, warning=FALSE,
                       echo=T,tidy=TRUE)
 library(tidyverse)
@@ -30,11 +30,12 @@ library(readxl)
 library(ggplot2)
 library(tableone)
 library(ggalluvial)
+library(ggpubr)
 ```
 
 ```{r, echo=FALSE}
-# load data
-# setwd("C:/Users/Lenovo/Desktop/Cornell Fall/Data Science/Biostats_Project")
+# Loading Data
+
 dat <- read_xlsx("sarcoma.xlsx", na = "NA")
 dat <- dat[complete.cases(dat),]
 
@@ -46,12 +47,25 @@ sarcoma <- sarcoma[complete.cases(sarcoma),]
 # Problem 1:  What are the descriptive characteristics of our sample?  
 
 ```{r, echo=FALSE}
-# Creating TableOne to understand the statistics of each parameter in the data
 
-CreateTableOne(strata = "ARMCD", data = dat)
+# Cleaning Data
+dat_grade <- dat %>%
+  mutate(
+    HISTGRDE = recode(as.character(HISTGRDE), 
+                      "Grade 4" = "High Grade", 
+                      "Grade 2" = "Intermediate Grade", 
+                      "Grade 3" = "Intermediate Grade", 
+                      "Grade 2/3" = "Intermediate Grade", 
+                      "Grade 1" = "Low Grade")
+  )
+
+# Creating TableOne to understand the statistics of each parameter in the data
+CreateTableOne(strata = "ARMCD", data = dat_grade)
 ```
 
 ```{r, echo=FALSE}
+## Alluvial Plot for Patient Progression
+
 plot_data <- dat %>% select (ID,ARMCD,STAGE,BESTRESP) %>%
              group_by(ARMCD,STAGE,BESTRESP) %>%
              summarise(COUNT = n()) %>% 
@@ -63,35 +77,42 @@ plot_data <- dat %>% select (ID,ARMCD,STAGE,BESTRESP) %>%
                     ARMCD = recode(ARMCD, 'A' = 'DOX + EVO', 'B' = 'DOX'))
 
 
- ggplot(plot_data,
-       aes(axis1 = STAGE,
-           axis2 = BESTRESP,
-           y = COUNT)) +
-  geom_alluvium(aes(fill = ARMCD),curve_type = "cubic") +
-  geom_stratum() +
-  geom_text(stat = "stratum", aes(label = after_stat(stratum)),size= 2.5) +
-  theme_void() +
-labs(title ="Participant Progression towards Response") +
-theme(plot.title = element_text(hjust = 0.5)) +
-guides(fill=guide_legend(title="Arms"))
+Patient_Progression <- ggplot(plot_data,
+                         aes(axis1 = STAGE,
+                             axis2 = BESTRESP,
+                             y = COUNT)) +
+                        geom_alluvium(aes(fill = ARMCD),curve_type = "cubic") +
+                        geom_stratum() +
+                        geom_text(stat = "stratum", aes(label = after_stat(stratum)),size= 2.5) +
+                        theme_void() +
+                        labs(title ="Participant Progression towards Response") +
+                        theme(plot.title = element_text(hjust = 0.5)) +
+                        guides(fill=guide_legend(title="Arms"))
 ```
 
 ```{r, echo=FALSE}
-dat %>% 
-  filter(BESTRESP != "NA") %>% 
-  ggplot(aes(BESTRESP, AGE, fill=BESTRESP)) + 
-  geom_boxplot() + 
-  theme_bw() + 
-  stat_summary(fun='mean',geom='point', shape=23, size=3, fill='white') + 
-  theme(legend.position = "none",
-        plot.title = element_text(hjust = 0.5)) +
-  scale_x_discrete(labels=c('Complete \nresponse', 
-                            'Progressive \ndisease', 
-                            'Partial \nresponse', 
-                            'Stable \ndisease')) + 
-  labs(x='', title='Best Response groups by age')
+## Response Groups by Age
+
+Best_Response <-  sarcoma %>% 
+                  filter(BESTRESP != "NA") %>% 
+                  ggplot(aes(BESTRESP, AGE, fill=BESTRESP)) + 
+                  geom_boxplot() + 
+                  theme_bw() + 
+                  stat_summary(fun='mean',geom='point', shape=23, size=3, fill='white') + 
+                  theme(legend.position = "none",
+                        plot.title = element_text(hjust = 0.5)) +
+                  scale_x_discrete(labels=c('Complete \nresponse', 
+                                            'Progressive \ndisease', 
+                                            'Partial \nresponse', 
+                                            'Stable \ndisease')) + 
+                  labs(x='', title='Best Response groups by age')
 ```
 
+```{r}
+ggarrange(Patient_Progression, Best_Response, 
+          labels = c("A", "B"),
+          ncol = 1, nrow = 1)
+```
 
 
 # Problem 2
@@ -99,24 +120,26 @@ dat %>%
 ## Problem 2.1：Are there any differences in baseline characteristics between the two arms of the trial?
 
 ### Problem 2.1: Check SEX
+
 check if 2 arms have the same amount of male & female in different arms 
 H0: The 2 arms have the same amount of male & female in different arms 
 H1: The 2 arms do not have the same amount of male & female in different arms 
+
 ```{r, echo=FALSE}
 prop.table(table(dat$SEX, dat$ARMCD))
 
-ggplot(dat, aes(ARMCD, fill = SEX)) + 
-  geom_bar(stat = "count")+  
-  theme_bw() +
-  labs(title = "Bar Plot of Sex in 2 Arms") +
-  theme(plot.title = element_text(hjust = 0.5))
+results_1 <- ggplot(dat, aes(ARMCD, fill = SEX)) + 
+              geom_bar(stat = "count")+  
+              theme_bw() +
+              labs(title = "Bar Plot of Sex in 2 Arms") +
+              theme(plot.title = element_text(hjust = 0.5))
 
 
 
 # from ggplot, no obvious differences in sex between the two arms of the trial
 
-results <- chisq.test(table(dat$SEX, dat$ARMCD))
-results
+chisq.test(table(dat$SEX, dat$ARMCD))
+
 # from chisq.test, p>0.05, fail to reject null. The 2 arms have the same amount of male & female in different stage 
 ```
 
@@ -127,11 +150,11 @@ H1: The 2 arms do not have the same amount of RACE in different arms
 ```{r, echo=FALSE}
 prop.table(table(dat$RACE, dat$ARMCD))
 
-ggplot(dat, aes(ARMCD, fill = RACE)) + 
-  geom_bar(stat = "count")+
-theme_bw() +
-  labs(title = "Bar Plot of Race in 2 Arms") +
-  theme(plot.title = element_text(hjust = 0.5))
+results_2 <- ggplot(dat, aes(ARMCD, fill = RACE)) + 
+              geom_bar(stat = "count")+
+              theme_bw() +
+              labs(title = "Bar Plot of Race in 2 Arms") +
+              theme(plot.title = element_text(hjust = 0.5))
 
 
 # from the plot, Arm A does not have the race of AMERICAN INDIAN OR ALASKA NATIV, also otherraces distribution are different between the two arms of the trial
@@ -144,11 +167,11 @@ fisher.test(table(dat$RACE, dat$ARMCD), simulate.p.value = TRUE)
 ```{r, echo=FALSE}
 prop.table(table(dat$ETHNIC, dat$ARMCD))
 
-ggplot(dat, aes(ARMCD, fill = ETHNIC)) + 
-  geom_bar(stat = "count")+
-theme_bw() +
-  labs(title = "Bar Plot of ETHNIC in 2 Arms") +
-  theme(plot.title = element_text(hjust = 0.5))
+results_3 <- ggplot(dat, aes(ARMCD, fill = ETHNIC)) + 
+              geom_bar(stat = "count")+
+              theme_bw() +
+              labs(title = "Bar Plot of ETHNIC in 2 Arms") +
+              theme(plot.title = element_text(hjust = 0.5))
 
 # from the ggplot, no obvious differences in ETHNIC  between the two arms of the trial
 
@@ -160,28 +183,6 @@ results <- chisq.test(table(dat$ETHNIC, dat$ARMCD))
 ```
 
 
-### Problem 2.1: Check baseline BECOG
-```{r, echo=FALSE}
-prop.table(table(dat$BECOG, dat$ARMCD))
-
-ggplot(dat, aes(ARMCD, fill = BECOG)) + 
-  geom_bar(stat = "count") +
-  theme_bw() +
-  labs(title = "Bar Plot of BECOG in 2 Arms") +
-  theme(plot.title = element_text(hjust = 0.5))
-
-  
-
-# from the ggplot, no obvious differences in BECOG  between the two arms of the trial
-
-
-fisher.test(table(dat$BECOG, dat$ARMCD), simulate.p.value = TRUE)
-# from the fisher test, the p-value is greater than 0.05, so fail to reject null. The 2 arms have the same amount of BECOG in different stage 
-```
-
-
-
-
 ## Problem 2.2：Are stage at diagnosis and histological grade at diagnosis different between the two groups? 
 ### Problem 2.2.a. STAGE $ ARMCD: 
 check if 2 arms have the same amount of patients in different stage 
@@ -190,11 +191,11 @@ H1: The 2 arms do not have the same amount of patients in different stage
 ```{r, echo=FALSE}
 prop.table(table(dat$STAGE, dat$ARMCD))
 
-ggplot(dat, aes(ARMCD, fill = STAGE)) + 
-  geom_bar(stat = "count") +
-  theme_bw() +
-  labs(title = "Bar Plot of STAGE in 2 Arms") +
-  theme(plot.title = element_text(hjust = 0.5))
+results_4 <- ggplot(dat, aes(ARMCD, fill = STAGE)) + 
+              geom_bar(stat = "count") +
+              theme_bw() +
+              labs(title = "Bar Plot of STAGE in 2 Arms") +
+              theme(plot.title = element_text(hjust = 0.5))
 
 results <- chisq.test(table(dat$STAGE, dat$ARMCD))
 results
@@ -218,11 +219,11 @@ dat_grade <- dat %>%
 
 prop.table(table(dat_grade$HISTGRDE, dat_grade$ARMCD))
 
-dat_grade %>% ggplot(aes(y = HISTGRDE, fill = ARMCD)) +
-  geom_bar(stat = "count") +
-  theme_bw() +
-  labs(title = "Bar Plot of Histological Grade in 2 Arms") +
-  theme(plot.title = element_text(hjust = 0.5))
+results_5 <- dat_grade %>% ggplot(aes(y = HISTGRDE, fill = ARMCD)) +
+              geom_bar(stat = "count") +
+              theme_bw() +
+              labs(title = "Bar Plot of Histological Grade in 2 Arms") +
+              theme(plot.title = element_text(hjust = 0.5))
 
 
 results <- chisq.test(table(dat_grade$HISTGRDE, dat_grade$ARMCD))
@@ -246,11 +247,11 @@ dat <- dat %>%
     tumor_size_change = 100*(as.numeric(EOT_SUM_DIAMETER)-as.numeric(BL_SUM_DIAMETER))/(as.numeric(BL_SUM_DIAMETER)))
 
 # check if the distribution is normal, so we can decide to use t-test or wilcox test
-ggplot(dat, aes(tumor_size_change, fill = ARMCD)) + 
-  geom_density(alpha=0.5) +
-  theme_bw() +
-  labs(title = "Density Plot of Tumor Size Change in 2 Arms") +
-  theme(plot.title = element_text(hjust = 0.5))
+results_6 <- ggplot(dat, aes(tumor_size_change, fill = ARMCD)) + 
+              geom_density(alpha=0.5) +
+              theme_bw() +
+              labs(title = "Density Plot of Tumor Size Change in 2 Arms") +
+              theme(plot.title = element_text(hjust = 0.5))
 
 shapiro.test(dat$tumor_size_change[dat$ARMCD == "A"])
 shapiro.test(dat$tumor_size_change[dat$ARMCD == "B"])
@@ -274,17 +275,24 @@ dat <- dat %>%
 
 prop.table(table(dat$BESTRESP, dat$ARMCD))
 
-ggplot(dat, aes(ARMCD, fill = BESTRESP)) + 
-  geom_bar(stat = "count") +
-  theme_bw() +
-  labs(title = "Bar Plot of Best Response in 2 Arms") +
-  theme(plot.title = element_text(hjust = 0.5))
+results_7 <- ggplot(dat, aes(ARMCD, fill = BESTRESP)) + 
+              geom_bar(stat = "count") +
+              theme_bw() +
+              labs(title = "Bar Plot of Best Response in 2 Arms") +
+              theme(plot.title = element_text(hjust = 0.5))
 
 results <- chisq.test(table(dat$BESTRESP, dat$ARMCD))
 results
 # chi-square result shows p<0.05，reject H0. There is no association in best response for patients in different arms of the trial
 
 ```
+
+```{r}
+ggarrange(results_1, results_2, results_3, results_4, results_5, results_6, results_7,
+          #labels = c("A", "B"),
+          ncol = 1, nrow = 1)
+```
+
 
 
 # Problem 3
@@ -323,6 +331,17 @@ mylogit$coefficients %>% exp()
 # Each 1 unit increase in AGE will decrease the log odds of getting a tumor response by 0.016
 # If a patient's race is BLACK OR AFRICAN AMERICAN, it will decrease the log odds of getting a tumor response by 3.20879
 ```
+
+From the logistic regression model, we see that the p-values for ARMCDB, and RACEBLACK OR AFRICAN AMERICAN are significant, indicating that they are associated with tumor response. We can interpret them as:
+
+1. If a patient belongs to Arm B, it will decrease the log odds of getting a tumor response by 0.554; so arm A (DOX+EVO) gives more tumor response
+2. If a patient's race is BLACK OR AFRICAN AMERICAN, it will decrease the log odds of getting a tumor response by 3.17
+
+We can also interpret the results suing Odds ratio:
+
+1. If a patient belongs to Arm B, the odds of getting a tumor response by 0.554; so arm A (DOX+EVO) gives more tumor response
+2. If a patient's race is BLACK OR AFRICAN AMERICAN, it will decrease the log odds of getting a tumor response by 3.17
+
 
 ## Alternate Model
 
