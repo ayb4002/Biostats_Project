@@ -1,0 +1,383 @@
+---
+title: "Code Portion"
+author: "Ayush Bhattacharya, Yuxiao Rui, Sirui Xu, Xia Wu"
+date: '2022-12-09'
+output: html_document
+---
+
+```{r,warning=FALSE, echo=FALSE}
+knitr::opts_chunk$set(cache=TRUE, error=FALSE, message=FALSE, warning=FALSE,
+                      echo=T,tidy=TRUE)
+```
+
+## Loading Libraries
+
+```{r, warning=FALSE}
+library(tidyverse)
+library(here)
+library(tidyr)
+library(amap)
+library(readxl)
+library(ggplot2)
+library(tableone)
+library(ggalluvial)
+library(ggpubr)
+```
+
+
+## Loading Data
+
+```{r}
+# Loading Data
+
+dat <- read_xlsx("sarcoma.xlsx", na = "NA")
+dat <- dat[complete.cases(dat),]
+
+sarcoma <-  read_xlsx("sarcoma.xlsx", na = "NA") 
+sarcoma <- sarcoma[complete.cases(sarcoma),]
+```
+
+
+## Problem 1:  What are the descriptive characteristics of our sample?  
+
+```{r}
+# Cleaning Data
+dat_grade <- dat %>%
+  mutate(
+    HISTGRDE = recode(as.character(HISTGRDE), 
+                      "Grade 4" = "High Grade", 
+                      "Grade 2" = "Intermediate Grade", 
+                      "Grade 3" = "Intermediate Grade", 
+                      "Grade 2/3" = "Intermediate Grade", 
+                      "Grade 1" = "Low Grade")
+  )
+
+# Creating TableOne to understand the statistics of each parameter in the data
+CreateTableOne(strata = "ARMCD", data = dat_grade)
+```
+
+```{r}
+## Alluivial Plot
+plot_data <- dat %>% select (ID,ARMCD,STAGE,BESTRESP) %>%
+             group_by(ARMCD,STAGE,BESTRESP) %>%
+             summarise(COUNT = n()) %>% 
+             filter(STAGE != 'NA') %>% filter(BESTRESP!= 'NA',
+                                              BESTRESP!= 'NE') %>%
+             mutate(BESTRESP = recode(BESTRESP, 'PD'= 'Progressive Disease', 'PR' = 'Partial Response', 
+                                      'CR' = 'Complete Response', 'SD' = 'Stable Disease', 'NE' =
+                                      'Inevaluable'),
+                    ARMCD = recode(ARMCD, 'A' = 'DOX + EVO', 'B' = 'DOX'))
+
+
+                        ggplot(plot_data,
+                         aes(axis1 = STAGE,
+                             axis2 = BESTRESP,
+                             y = COUNT)) +
+                        geom_alluvium(aes(fill = ARMCD),curve_type = "cubic") +
+                        geom_stratum() +
+                        geom_text(stat = "stratum", aes(label = after_stat(stratum)),size= 2.5) +
+                        theme_void() +
+                        labs(title ="Participant Progression towards Response") +
+                        theme(plot.title = element_text(hjust = 0.5)) +
+                        guides(fill=guide_legend(title="Arms"))
+```
+
+```{r}
+## Response Groups by Age
+sarcoma %>% 
+filter(BESTRESP != "NA") %>% 
+ggplot(aes(BESTRESP, AGE, fill=BESTRESP)) + 
+geom_boxplot() + 
+theme_bw() + 
+stat_summary(fun='mean',geom='point', shape=23, size=3, fill='white') + 
+theme(legend.position = "none",
+      plot.title = element_text(hjust = 0.5)) +
+scale_x_discrete(labels=c('Complete \nresponse', 
+                          'Progressive \ndisease', 
+                          'Partial \nresponse', 
+                          'Stable \ndisease')) + 
+labs(x='', title='Best Response groups by age')
+```
+
+
+## Problem 2.1：Are there any differences in baseline characteristics between the two arms of the trial?
+
+```{r}
+### Problem 2.1.1: Checking Gender
+
+prop.table(table(dat$SEX, dat$ARMCD))
+
+ggplot(dat, aes(ARMCD, fill = SEX)) + 
+geom_bar(stat = "count")+  
+theme_bw() +
+labs(title = "Bar Plot of Gender in Two Arms", x="Treatment Arm", y= "Count") +
+theme(plot.title = element_text(hjust = 0.5)) 
+
+# from ggplot, no obvious differences in sex between the two arms of the trial
+
+chisq.test(table(dat$SEX, dat$ARMCD))
+
+# from chisq.test, p>0.05, fail to reject null. The 2 arms have the same amount of male & female in different stage
+```
+
+```{r}
+### Problem 2.1.2: Checking Race
+
+prop.table(table(dat$RACE, dat$ARMCD))
+
+ggplot(dat, aes(ARMCD, fill = RACE)) + 
+geom_bar(stat = "count")+
+theme_bw() +
+labs(title = "Bar Plot of Race in Two Arms" ,x="Treatment Arm", y= "Count") +
+theme(plot.title = element_text(hjust = 0.5))
+
+# from the plot, Arm A does not have the race of AMERICAN INDIAN OR ALASKA NATIV, also other races distribution are different between the two arms of the trial
+
+fisher.test(table(dat$RACE, dat$ARMCD), simulate.p.value = TRUE)
+# from the fisher test, the p-value is greater than 0.05, so fail to reject null. The 2 arms have the same amount of RACE in different stage 
+```
+
+```{r}
+### Problem 2.1.3: Checking Ethnicity
+
+prop.table(table(dat$ETHNIC, dat$ARMCD))
+
+ggplot(dat, aes(ARMCD, fill = ETHNIC)) + 
+geom_bar(stat = "count")+
+theme_bw() +
+labs(title = "Bar Plot of Ethnicity in Two Arms",  x="Treatment Arm", y= "Count") +
+theme(plot.title = element_text(hjust = 0.5))
+
+# from the ggplot, no obvious differences in ETHNIC  between the two arms of the trial
+
+chisq.test(table(dat$ETHNIC, dat$ARMCD))
+
+
+# from chisq.test, p>0.05, fail to reject null. The 2 arms have the same amount of ETHNIC in different stage 
+```
+
+
+## Problem 2.2：Are stage at diagnosis and histological grade at diagnosis different between the two groups? 
+
+```{r}
+### Problem 2.2.1. STAGE $ ARMCD: 
+
+prop.table(table(dat$STAGE, dat$ARMCD))
+
+ggplot(dat, aes(ARMCD, fill = STAGE)) + 
+geom_bar(stat = "count") +
+theme_bw() +
+labs(title = "Bar Plot of Stage at Diagnosis in Two Arms",x="Treatment Arm", y= "Count") +
+theme(plot.title = element_text(hjust = 0.5))
+
+chisq.test(table(dat$STAGE, dat$ARMCD))
+
+# chi-square result shows p<0.05，reject H0，so 2 arms do not have the same amount of patients in different stage 
+```
+
+```{r}
+### Problem 2.2.2. HISTGRDE $ ARMCD:
+
+dat_grade <- dat %>%
+  mutate(
+    HISTGRDE = recode(as.character(HISTGRDE), 
+                      "Grade 4" = "High Grade", 
+                      "Grade 2" = "Intermediate Grade", 
+                      "Grade 3" = "Intermediate Grade", 
+                      "Grade 2/3" = "Intermediate Grade", 
+                      "Grade 1" = "Low Grade")
+  )
+
+prop.table(table(dat_grade$HISTGRDE, dat_grade$ARMCD))
+
+dat_grade %>% ggplot(aes(y = HISTGRDE, fill = ARMCD)) +
+geom_bar(stat = "count") +
+theme_bw() +
+labs(title = "Bar Plot of Histological Grade in 2 Arms",y="Histological Grade", x= "Count") +
+theme(plot.title = element_text(hjust = 0.5))
+
+
+results <- chisq.test(table(dat_grade$HISTGRDE, dat_grade$ARMCD))
+results$expected
+# The expected count of Low Grade is smaller than 5，so chi-square is not suitable. We choose fisher test.
+# fisher
+fisher.test(table(dat$HISTGRDE, dat$ARMCD), simulate.p.value = TRUE)
+
+# p>0.05，fail to reject H0，so 2 arms do not have the same amount of patients in each histological grade at diagnosis
+```
+
+
+## Problem 2.3： Is there a difference in outcomes for patients in different arms of the trial?
+
+```{r}
+# first define the tumor_size_change
+dat <- dat %>%
+  mutate(
+    tumor_size_change = 100*(as.numeric(EOT_SUM_DIAMETER)-as.numeric(BL_SUM_DIAMETER))/(as.numeric(BL_SUM_DIAMETER)))
+
+# check if the distribution is normal, so we can decide to use t-test or wilcox test
+ggplot(dat, aes(tumor_size_change, fill = ARMCD)) + 
+geom_density(alpha=0.5) +
+theme_bw() +
+labs(title = "Density Plot of Tumor Size Change in two Arms") +
+theme(plot.title = element_text(hjust = 0.5))
+
+shapiro.test(dat$tumor_size_change[dat$ARMCD == "A"])
+shapiro.test(dat$tumor_size_change[dat$ARMCD == "B"])
+# p<0.05，we reject null and states the data is not normal, we cannot use t test. Then we use wilcox.
+
+wilcox.test(tumor_size_change~ARMCD, dat)
+# p>0.05，fail to reject H0. There is no difference in tumor size change for patients in different arms of the trial
+```
+
+```{r}
+# set the response variable BESTRESP to be 0 or 1, (no tumor response or with tumor response)
+dat <- dat %>%
+  mutate(
+    BESTRESP = recode(as.character(BESTRESP), "PD" = "0", "SD" = "0", "NE" = "0", 
+                      "PR" = "1", "CR" = "1")
+  )
+
+prop.table(table(dat$BESTRESP, dat$ARMCD))
+
+ggplot(dat, aes(ARMCD, fill = BESTRESP)) + 
+geom_bar(stat = "count") +
+theme_bw() +
+labs(title = "Bar Plot of Best Response in Two Arms",x="Treatment Arm", y= "Count") +
+theme(plot.title = element_text(hjust = 0.5))
+
+chisq.test(table(dat$BESTRESP, dat$ARMCD))
+
+# chi-square result shows p<0.05，reject H0. There is no association in best response for patients in different arms of the trial
+```
+
+
+## Problem 3.1: What factors are associated with tumor response (binary)?
+
+```{r}
+## Logistic Model 1: Considering only Patient Demographics
+
+# clean the data
+dat$EOT_SUM_DIAMETER=as.numeric(dat$EOT_SUM_DIAMETER)
+
+# drop NA
+dat=dat %>% filter(BL_SUM_DIAMETER!="NA") %>% filter(EOT_SUM_DIAMETER!="NA")
+dat=dat %>% filter(BESTRESP!="NA")  %>%
+  mutate(
+    age_group= ifelse(AGE > 60, "older than 60", "younger or equal to 60") )
+
+dat_young=dat%>%filter(age_group=="younger or equal to 60")
+dat_old=dat%>%filter(age_group=="older than 60")
+
+# change y to numeric
+dat$BESTRESP = as.numeric(dat$BESTRESP)
+
+# in arm A, treatments echo DOX+EVO
+# in arm B, treatments echo DOX only
+mylogit <- glm(dat$BESTRESP ~ dat$ARMCD + age_group +RACE + ETHNIC, data = dat, family = "binomial")
+summary(mylogit)
+
+mylogit$coefficients %>% exp()
+```
+
+```{r}
+## Logistic Model 2: Considering Patient Demographics and Treatment Baseline and Pathway
+
+# clean the data
+dat$EOT_SUM_DIAMETER=as.numeric(dat$EOT_SUM_DIAMETER)
+
+# drop NA
+dat=dat %>% filter(BL_SUM_DIAMETER!="NA") %>% filter(EOT_SUM_DIAMETER!="NA")
+dat=dat %>% filter(BESTRESP!="NA")  %>%
+  mutate(
+    age_group= ifelse(AGE > 60, "older than 60", "younger or equal to 60") )
+
+dat_young=dat%>%filter(age_group=="younger or equal to 60")
+dat_old=dat%>%filter(age_group=="older than 60")
+
+# change y to numeric
+dat$BESTRESP = as.numeric(dat$BESTRESP)
+dat$HISTGRP = as.factor(dat$HISTGRP)
+dat$STAGE = as.factor(dat$STAGE)
+dat$PRADFL = as.factor(dat$PRADFL)
+dat$PCHEMFL = as.factor(dat$PCHEMFL)
+
+# in arm A, treatments echo DOX+EVO
+# in arm B, treatments echo DOX only
+mylogit <- glm(dat$BESTRESP ~ dat$ARMCD + age_group +RACE + ETHNIC + HISTGRP + STAGE + PRADFL + PCHEMFL, data = dat, family = "binomial")
+summary(mylogit)
+```
+
+
+## Problem 3.2：What factors are associated With percent change in sum of tumor diameters (continuous)? 
+
+```{r}
+model2 <- lm(dat$tumor_size_change ~ dat$ARMCD + AGE+RACE + ETHNIC, data = dat)
+summary(model2)
+```
+
+
+## Problem 4.2: Potential differential treatment effects in subgroups of patients (e.g., gender, race, age groups, etc.)
+
+```{r}
+### For subgroup Gender, if treatment allocation (ARMCD) cause a change on the outcome (Best response)
+
+# split data by sex
+dat_female=dat%>%filter(SEX=="F")
+dat_male=dat%>%filter(SEX=="M")
+
+# check treatment effects by Best response
+female_logit <- glm(dat_female$BESTRESP ~ dat_female$ARMCD, data = dat_female, family = "binomial")
+summary(female_logit)
+# for female, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor response in female. 
+
+male_logit <- glm(dat_male$BESTRESP ~ dat_male$ARMCD, data = dat_male, family = "binomial")
+summary(male_logit)
+# for male, the p-value of the treatment allocation (ARMCD) is significant, so ARMCD does cause a change on the tumor response in male. If a male patient belongs to arm B, it will decrease the log odds of getting a tumor response by 0.61.
+```
+
+```{r}
+### For subgroup race, if treatment allocation (ARMCD) cause a change on the outcome (Best response)
+
+# split data by the top 3 representative race
+dat_white=dat%>%filter(RACE=="WHITE")
+dat_black=dat%>%filter(RACE=="BLACK OR AFRICAN AMERICAN")
+dat_asia=dat%>%filter(RACE=="ASIAN")
+
+
+# check treatment effects in Best response
+white_logit <- glm(BESTRESP ~ ARMCD, data = dat_white, family = "binomial")
+summary(white_logit)
+# for white race, the p-value of the treatment allocation (ARMCD) is significant, so ARMCD does cause a change on the tumor response in female. 
+# If a white patient belongs to arm B, it will decrease the log odds of getting a tumor response by 0.51
+
+black_logit <- glm(BESTRESP ~ ARMCD, data = dat_black, family = "binomial")
+summary(black_logit)
+# for black race, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor response in black race.
+
+asia_logit <- glm(BESTRESP ~ ARMCD, data = dat_asia, family = "binomial")
+summary(asia_logit)
+# for Asian race, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor response in asia race.
+```
+
+```{r}
+### For subgroup Age groups, if treatment allocation (ARMCD) cause a change on the outcome (Best response)
+
+# split the data by 2 age groups
+dat <- dat %>%
+  mutate(
+    age_group= ifelse(AGE > 60, "older than 60", "younger or equal to 60") )
+
+dat_young=dat%>%filter(age_group=="younger or equal to 60")
+dat_old=dat%>%filter(age_group=="older than 60")
+
+# check treatment effects in Best response
+young_logit <- glm(BESTRESP ~ ARMCD, data = dat_young, family = "binomial")
+summary(young_logit)
+# for people younger or equal to 60, the p-value of the treatment allocation (ARMCD) is significant, so ARMCD does cause a change on the tumor response. If a patient who is younger or equal to 60 and belongs to arm B, it will decrease the log odds of getting a tumor response by 0.78.
+
+old_logit <- glm(BESTRESP ~ ARMCD, data = dat_old, family = "binomial")
+summary(old_logit)
+# for people older than 60 male, the p-value of the treatment allocation (ARMCD) is not significant, so ARMCD does not cause a change on the tumor response in older people.
+```
+
